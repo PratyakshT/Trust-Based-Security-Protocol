@@ -4,7 +4,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Connect to the exact same database Django created.
 # Notice the "+asyncpg" driver for high-speed asynchronous I/O.
-DATABASE_URL = "postgresql+asyncpg://postgres:password@localhost:5432/siot_network"
+DATABASE_URL = "postgresql+asyncpg://postgres:prat2606@localhost:5432/siot_network"
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

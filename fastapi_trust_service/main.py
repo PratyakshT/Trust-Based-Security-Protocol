@@ -20,7 +20,26 @@ class InteractionCreate(BaseModel):
     service_id: str
     rating: int
 
+class NodeCreate(BaseModel):
+    node_id: str
+    device_category: str
+    dcc_score: float
+    elc_score: float
+    msrc_score: float
+
 # --- API Endpoints ---
+
+@app.post("/api/register/")
+async def register_node(node: NodeCreate, db: AsyncSession = Depends(get_db)):
+    """Day 4 Add-on: Registers a node so Foreign Keys don't fail."""
+    new_node = models.SIoTNode(**node.model_dump())
+    db.add(new_node)
+    try:
+        await db.commit()
+    except Exception:
+        await db.rollback() # Ignore if node already exists from previous runs
+    return {"status": "success", "node_id": node.node_id}
+
 
 @app.post("/api/interactions/")
 async def log_interaction(interaction: InteractionCreate, db: AsyncSession = Depends(get_db)):
