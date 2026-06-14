@@ -1,24 +1,22 @@
-# main.py
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import update
+import models
+from database import engine, Base, get_db
 from pydantic import BaseModel
 import pandas as pd
+import ml_engine
 
-# Local imports
-import models
-from database import get_db
-from ml_engine import extract_trust_features, get_or_train_model
+app = FastAPI(title="DSL-STM Cyber e v3")
 
-app = FastAPI(title="DSL-STM Ingestion & Trust Engine")
-
-# --- Pydantic Schemas for Data Validation ---
 class InteractionCreate(BaseModel):
     requester_id: str
     provider_id: str
     service_id: str
     rating: int
+    response_time_ms: float
+    latency_ms: float
+    social_similarity_score: float
 
 class NodeCreate(BaseModel):
     node_id: str
@@ -27,101 +25,99 @@ class NodeCreate(BaseModel):
     elc_score: float
     msrc_score: float
 
-# --- API Endpoints ---
+@app.on_event("startup")
+async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 @app.post("/api/register/")
 async def register_node(node: NodeCreate, db: AsyncSession = Depends(get_db)):
-    """Day 4 Add-on: Registers a node so Foreign Keys don't fail."""
-    new_node = models.SIoTNode(**node.model_dump())
+    result = await db.execute(select(models.SIoTNode).filter(models.SIoTNode.node_id == node.node_id))
+    existing_node = result.scalars().first()
+    if existing_node:
+        return {"status": "already_registered"}
+    
+    new_node = models.SIoTNode(
+        node_id=node.node_id,
+        device_category=node.device_category,
+        dcc_score=node.dcc_score,
+        elc_score=node.elc_score,
+        msrc_score=node.msrc_score
+    )
     db.add(new_node)
-    try:
-        await db.commit()
-    except Exception:
-        await db.rollback() # Ignore if node already exists from previous runs
-    return {"status": "success", "node_id": node.node_id}
-
+    await db.commit()
+    return {"status": "success"}
 
 @app.post("/api/interactions/")
 async def log_interaction(interaction: InteractionCreate, db: AsyncSession = Depends(get_db)):
-    """
-    Day 2: High-speed endpoint. Accepts interactions and writes them to PostgreSQL asynchronously.
-    """
     if interaction.rating not in [0, 1]:
         raise HTTPException(status_code=400, detail="Rating must be 0 or 1")
     
-    # Create the SQLAlchemy object
     new_interaction = models.InteractionHistory(
         requester_id=interaction.requester_id,
         provider_id=interaction.provider_id,
         service_id=interaction.service_id,
-        rating=interaction.rating
+        rating=interaction.rating,
+        response_time_ms=interaction.response_time_ms,
+        latency_ms=interaction.latency_ms,
+        social_similarity_score=interaction.social_similarity_score
     )
-    
-    # Async database write
     db.add(new_interaction)
     await db.commit()
-    
-    return {"status": "success", "message": "Interaction logged"}
-
+    return {"status": "success"}
 
 @app.get("/api/calculate_trust/")
-async def calculate_system_trust(db: AsyncSession = Depends(get_db)):
-    """
-    Day 3: The main trigger for the DSL-STM calculations.
-    Pulls data, extracts features, runs the Neural Network, and punishes attackers.
-    """
-    # 1. Fetch all interactions asynchronously
-    result = await db.execute(select(models.InteractionHistory))
-    interactions = result.scalars().all()
+async def calculate_trust(db: AsyncSession = Depends(get_db)):
+    """V3: High-Performance Multi-Dimensional trust evaluation endpoint."""
+    # 1. Fetch entire ledger state from PostgreSQL
+    interaction_result = await db.execute(select(models.InteractionHistory))
+    interactions = interaction_result.scalars().all()
     
     if not interactions:
-        return {"status": "skipped", "message": "No interactions to process."}
-        
-    # Convert SQLAlchemy objects to Pandas DataFrame for the ML engine
+        return {"processed_interactions": 0, "msg": "No interactions available."}
+
     data = [{
-        "requester_id": i.requester_id, 
-        "provider_id": i.provider_id, 
-        "rating": i.rating
+        "interaction_id": i.interaction_id,
+        "requester_id": i.requester_id,
+        "provider_id": i.provider_id,
+        "rating": i.rating,
+        "response_time_ms": i.response_time_ms,
+        "latency_ms": i.latency_ms,
+        "social_similarity_score": i.social_similarity_score,
+        "timestamp": i.timestamp
     } for i in interactions]
-    
     df = pd.DataFrame(data)
+
+    # 2. Extract advanced metrics via updated ML e
+    node_profiles, pairwise_df = ml_engine.extract_multidimensional_features(df)
     
-    # 2. Extract Features (Trust Composition)
-    features_df = extract_trust_features(df)
-    
-    # 3. Get the AI Model and Predict
-    mlp = get_or_train_model(features_df)
+    # 3. Compile or retrieve the MLP network
+    mlp_model = ml_engine.get_or_train_model(node_profiles)
     
     malicious_nodes = []
-    if mlp is not None:
-        # Prepare the features exactly as the model expects them
-        X_predict = features_df[['reputation_score', 'total_interactions', 'rating_trend']]
-        predictions = mlp.predict(X_predict)
-        features_df['is_malicious_prediction'] = predictions
-        
-        # 4. Countermeasures (Punishing the attackers)
-        for index, row in features_df.iterrows():
-            provider_id = row['provider_id']
-            is_malicious = bool(row['is_malicious_prediction'])
-            
-            if is_malicious:
-                malicious_nodes.append(provider_id)
-                
-                # Apply mathematical penalty (as per the paper)
-                penalized_score = row['reputation_score'] / 1.5
-                
-                # Update the database to flag this node as malicious
-                await db.execute(
-                    update(models.SIoTNode)
-                    .where(models.SIoTNode.node_id == provider_id)
-                    .values(is_malicious=True)
-                )
-
-    await db.commit()
     
+    if mlp_model and not node_profiles.empty:
+        X_infer = node_profiles[['reputation_score', 'fluctuation_score', 'rating_trend_score', 'credibility_score', 'avg_response_time', 'avg_latency', 'discriminatory_bias', 'max_rating_frequency']]
+        
+        predictions = mlp_model.predict(X_infer)
+        node_profiles['pred'] = predictions
+        
+        # FIX: Explicitly target all non-zero classifications (Class 1 and Class 2)
+        flagged_df = node_profiles[node_profiles['pred'] != 0]
+        malicious_nodes = flagged_df['node_id'].tolist()
+        
+        # 4. Synchronize security flags down to operational database layer
+        if malicious_nodes:
+            await db.execute(
+                models.SIoTNode.__table__.update()
+                .where(models.SIoTNode.node_id.in_(malicious_nodes))
+                .values(is_malicious=True)
+            )
+            await db.commit()
+
     return {
-        "status": "success",
-        "processed_interactions": len(interactions),
-        "analyzed_nodes": len(features_df),
-        "malicious_nodes_detected": malicious_nodes
+        "processed_interactions": len(df),
+        "analyzed_nodes": len(node_profiles),
+        "malicious_nodes_detected": malicious_nodes,
+        "dimensions_active": ["User-Trust", "Device-Trust (Static)", "Contextual-Trust (Jaccard Ready)"]
     }

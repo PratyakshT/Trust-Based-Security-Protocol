@@ -26,6 +26,9 @@ class InteractionHistory(models.Model):
     
     service_id = models.CharField(max_length=100)
     rating = models.IntegerField(choices=[(0, 'Bad'), (1, 'Good')])
+    response_time_ms = models.FloatField(default=0.0)
+    latency_ms = models.FloatField(default=0.0)
+    social_similarity_score = models.FloatField(default=0.0)
     timestamp = models.DateTimeField(default=timezone.now)
     is_mitigated = models.BooleanField(default=False, help_text="True if rating was nullified by countermeasure")
 

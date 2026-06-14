@@ -1,7 +1,9 @@
 # models.py
-from sqlalchemy import Column, String, Float, Boolean, Integer, DateTime, ForeignKey
+from sqlalchemy import Column, String, Float, Boolean, Integer, DateTime, ForeignKey, Table
 from database import Base
 import datetime
+
+
 
 class SIoTNode(Base):
     # Django created this table as "appname_modelname"
@@ -24,5 +26,8 @@ class InteractionHistory(Base):
     provider_id = Column(String(100), ForeignKey("network_state_siotnode.node_id"))
     service_id = Column(String(100))
     rating = Column(Integer)  # 0 for Bad, 1 for Good
+    response_time_ms = Column(Float, default=0.0)
+    latency_ms = Column(Float, default=0.0)
+    social_similarity_score = Column(Float, default=0.0)
     timestamp = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     is_mitigated = Column(Boolean, default=False)
