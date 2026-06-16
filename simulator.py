@@ -2,6 +2,16 @@ import requests
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import os
+import sys
+import django
+
+# Configure Django so we can use the models directly from the simulator
+sys.path.append(os.path.join(os.path.dirname(__file__), 'django_admin_service'))
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'django_admin_service.settings')
+django.setup()
+
+from network_state.models import UserDimension, DeviceDimension, ServiceDimension, NodeRelationship
 
 BASE_URL = "http://127.0.0.1:8001/api"
 NUM_NODES = 50
@@ -12,6 +22,28 @@ BAD_MOUTHERS = [f"node_{i}" for i in range(40, 50)]
 ON_OFF_ATTACKERS = [f"node_{i}" for i in range(30, 40)]
 DISCRIMINATORY_ATTACKERS = [f"node_{i}" for i in range(20, 30)]
 TARGET_NODE = "node_1"
+
+def initialize_dimensions():
+    print("--- [PHASE 0] Registering 10 Users, 10 Devices, and 10 Services ---")
+    # Create instances (using range 1-11 for IDs 1 to 10)
+    users = [UserDimension(user_id=i) for i in range(1, 11)]
+    devices = [DeviceDimension(device_id=i) for i in range(1, 11)]
+    services = [ServiceDimension(service_id=i) for i in range(1, 11)]
+
+    # bulk_create ignores duplicates, allowing safe re-runs
+    UserDimension.objects.bulk_create(users, ignore_conflicts=True)
+    DeviceDimension.objects.bulk_create(devices, ignore_conflicts=True)
+    ServiceDimension.objects.bulk_create(services, ignore_conflicts=True)
+
+    print("Initializing NodeRelationships...")
+    relationships = []
+    for i in range(1, 11):
+        for j in range(1, 11):
+            if i != j:  # Assuming a node doesn't have a relationship with itself
+                relationships.append(NodeRelationship(source_node_id=i, target_node_id=j))
+    
+    NodeRelationship.objects.bulk_create(relationships, ignore_conflicts=True)
+    print(f"Base Dimensions & {len(relationships)} NodeRelationships Registered.\n")
 
 def register_nodes_v3():
     print("--- [PHASE 1] Registering 50 Discrete Hardware SIoT Nodes ---")
@@ -81,7 +113,9 @@ def simulate_telemetry_interaction(idx):
         "social_similarity_score": social_sim
     }
     requests.post(f"{BASE_URL}/interactions/", json=payload)
+
 def run_upgraded_simulation():
+    initialize_dimensions()
     register_nodes_v3()
     print(f"--- [PHASE 2] Simulating {TOTAL_INTERACTIONS} Multi-Threat Telemetry Invocations ---")
     

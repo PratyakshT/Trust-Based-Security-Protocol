@@ -3,8 +3,6 @@ from sqlalchemy import Column, String, Float, Boolean, Integer, DateTime, Foreig
 from database import Base
 import datetime
 
-
-
 class SIoTNode(Base):
     # Django created this table as "appname_modelname"
     __tablename__ = "network_state_siotnode"
@@ -31,3 +29,5 @@ class InteractionHistory(Base):
     social_similarity_score = Column(Float, default=0.0)
     timestamp = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     is_mitigated = Column(Boolean, default=False)
+
+#  need to update these tables as well
