@@ -7,6 +7,9 @@ class UserDimension(models.Model):
     reputation=models.FloatField(default=0.5)
     rating_trend=models.FloatField(default=0.5)
     fluctuation=models.FloatField(default=0.5)
+    total_interaction_provider=models.IntegerField(default=0)
+    total_interaction_requester=models.IntegerField(default=0)
+    prev_qos_provided=models.FloatField(default=0.5)
     user_trust_score=models.FloatField(default=0.5)
 
     def __str__(self):
@@ -44,6 +47,7 @@ class NodeRelationship(models.Model):
     direct_exchange = models.FloatField(default=0.5)
     rating_frequency = models.FloatField(default=0.5)
     recommendation = models.FloatField(default=0.5)
+    total_interaction_bw_prov_req=models.IntegerField(default=0)
 
     class Meta:
         # This acts as your N x N matrix coordinate constraint: 
@@ -74,16 +78,11 @@ class SIoTNode(models.Model):
 class InteractionHistory(models.Model):
     """The immutable ledger of all network events used for ML feature extraction."""
     interaction_id = models.AutoField(primary_key=True)
-    requester = models.ForeignKey(SIoTNode, related_name='requests_made', on_delete=models.CASCADE)
-    provider = models.ForeignKey(SIoTNode, related_name='services_provided', on_delete=models.CASCADE)
-    
-    # service_id = models.CharField(max_length=100)
-    # rating = models.IntegerField(choices=[(0, 'Bad'), (1, 'Good')])
-    # response_time_ms = models.FloatField(default=0.0)
-    # latency_ms = models.FloatField(default=0.0)
-    # social_similarity_score = models.FloatField(default=0.0)
-    # timestamp = models.DateTimeField(default=timezone.now)
-    # is_mitigated = models.BooleanField(default=False, help_text="True if rating was nullified by countermeasure")
+    requester = models.ForeignKey(UserDimension, related_name='requests_made', on_delete=models.CASCADE)
+    provider = models.ForeignKey(UserDimension, related_name='services_provided', on_delete=models.CASCADE)
+    quality_of_service_provided=models.FloatField(default=0.5)
+    rating_received=models.FloatField(default=0.5)
+    timestamp = models.DateTimeField(default=timezone.now)
 
     class Meta:
         # Indexing speeds up the complex groupby queries our ML model will run later

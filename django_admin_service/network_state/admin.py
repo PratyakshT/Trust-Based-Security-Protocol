@@ -11,7 +11,7 @@ class SIoTNodeAdmin(admin.ModelAdmin):
 
 @admin.register(InteractionHistory) 
 class InteractionHistoryAdmin(admin.ModelAdmin):
-    list_display = ('interaction_id','requester', 'provider')
+    list_display = ('interaction_id','requester', 'provider','quality_of_service_provided','rating_received')
     list_filter = ('requester', 'provider')
 
 @admin.register(TrustScore)
@@ -20,7 +20,7 @@ class TrustScoreAdmin(admin.ModelAdmin):
 
 @admin.register(UserDimension) 
 class UserDimensionAdmin(admin.ModelAdmin):
-    list_display = ('user_id', 'credibility', 'reputation','rating_trend','fluctuation','user_trust_score')
+    list_display = ('user_id', 'credibility', 'reputation','rating_trend','fluctuation','user_trust_score','total_interaction_provider','total_interaction_requester','prev_qos_provided')
     list_filter = ('user_id',)
 
 @admin.register(DeviceDimension) 
@@ -35,5 +35,5 @@ class ServiceDimensionAdmin(admin.ModelAdmin):
 
 @admin.register(NodeRelationship) 
 class NodeRelationshipAdmin(admin.ModelAdmin):
-    list_display = ('source_node', 'target_node', 'relationship_strength','similarity','direct_exchange','rating_frequency','recommendation')
+    list_display = ('source_node', 'target_node', 'relationship_strength','similarity','direct_exchange','rating_frequency','recommendation','total_interaction_bw_prov_req')
     list_filter = ('source_node', 'target_node')
