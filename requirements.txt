@@ -1,0 +1,16 @@
+django
+djangorestframework
+djangorestframework-simplejwt
+psycopg2-binary
+fastapi
+uvicorn
+sqlalchemy
+asyncpg
+pydantic
+tensorflow
+pandas
+scikit-learn
+numpy
+requests
+seaborn
+matplotlib

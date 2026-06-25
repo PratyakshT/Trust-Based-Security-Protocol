@@ -1,22 +1,10 @@
-# pyrefly: ignore [missing-import]
 from django.contrib import admin
-# pyrefly: ignore [missing-import]
-from .models import SIoTNode, InteractionHistory, TrustScore, UserDimension, DeviceDimension,ServiceDimension, NodeRelationship
-
-@admin.register(SIoTNode)
-class SIoTNodeAdmin(admin.ModelAdmin):
-    list_display = ('node_id','user','device','service','is_malicious', 'joined_at')
-    list_filter = ('is_malicious',)
-    search_fields = ('node_id',)
+from .models import  InteractionHistory, UserDimension, DeviceDimension,ServiceDimension, NodeRelationship
 
 @admin.register(InteractionHistory) 
 class InteractionHistoryAdmin(admin.ModelAdmin):
-    list_display = ('interaction_id','requester', 'provider','quality_of_service_provided','rating_received')
+    list_display = ('interaction_id','requester', 'provider','quality_of_service_provided','rating_received','total_trust_for_interaction','timestamp')
     list_filter = ('requester', 'provider')
-
-@admin.register(TrustScore)
-class TrustScoreAdmin(admin.ModelAdmin):
-    list_display = ('node', 't_final', 't_user', 't_device', 't_service', 'updated_at')
 
 @admin.register(UserDimension) 
 class UserDimensionAdmin(admin.ModelAdmin):

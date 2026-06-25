@@ -80,7 +80,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'siot_network',
         'USER': 'postgres',     
-        'PASSWORD': 'prat2606', 
+        'PASSWORD': '[PASSWORD]', 
         'HOST': 'localhost',
         'PORT': '5432',
     }

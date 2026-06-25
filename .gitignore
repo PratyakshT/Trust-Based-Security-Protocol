@@ -1,0 +1,12 @@
+venv/
+CSVs/
+__pycache__/
+fastapi_trust_service/venv/
+fastapi_trust_service/__pycache__/
+django_admin_service/django_admin_service/__pycache__/
+django_admin_service/db.sqlite3
+django_admin_service/network_state/migrations
+django_admin_service/network_state/__pycache__/
+*.pyc
+.env
+*.log

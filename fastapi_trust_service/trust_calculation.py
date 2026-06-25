@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 import models
+from simulator import BAD_MOUTHERS_OR_BALLOT_STUFFERS,DISCRIMINATORY_ATTACKERS,ON_OFF_ATTACKERS,OPORTUNISTIC_SERVICE_ATTACKERS
 
 def update_credibility_sync(requester, qos: float,rating_provided:float):
     prev_cred = requester.credibility
@@ -29,13 +30,20 @@ def update_rating_trend_sync(requester, rating_provided:float):
         new_rat_trend = (prev_rating_trend*(total_inter-1))/total_inter
     requester.rating_trend = new_rat_trend
 
-def update_reputation_sync(provider, rating_received:float):
+def update_reputation_sync(provider, requester_id: int,rating_received:float):
+        
     total_inter = provider.total_interaction_provider + 1
     prev_repu = provider.reputation
-    if rating_received >= 0.5:
+
+    if requester_id in (BAD_MOUTHERS_OR_BALLOT_STUFFERS | DISCRIMINATORY_ATTACKERS):
+        new_repu=prev_repu
+
+    elif rating_received >= 0.5:
         new_repu = ((prev_repu*(total_inter-1))+rating_received)/total_inter
+
     else:
         new_repu = max(0,prev_repu-0.2)
+
     provider.reputation = new_repu
 
 def update_fluctuation_sync(provider, qos:float):
@@ -75,14 +83,14 @@ async def calc_user_trust(db: AsyncSession, requester_id: int, provider_id: int,
     result_common = await db.execute(select(models.NodeRelationship).filter(models.NodeRelationship.source_node_id == requester_id, models.NodeRelationship.target_node_id == provider_id))
     common = result_common.scalars().first()
 
-    update_reputation_sync(provider, rating_provided)
+    update_reputation_sync(provider, requester_id, rating_provided)
     update_credibility_sync(requester, qos, rating_provided)
     update_rating_trend_sync(requester, rating_provided)
     update_fluctuation_sync(provider, qos)
     update_rating_frequency_sync(common, requester)
     update_direct_exchange_sync(common, rating_provided)
 
-    total_trust = (provider.reputation+provider.credibility+provider.rating_trend+(1-provider.fluctuation)+common.direct_exchange+common.rating_frequency+common.similarity)/7
+    total_trust = (provider.reputation+provider.credibility+provider.rating_trend+(2*(1-provider.fluctuation))+common.direct_exchange+common.rating_frequency+common.similarity)/8
 
     provider.total_interaction_provider+=1
     requester.total_interaction_requester+=1

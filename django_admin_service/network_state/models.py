@@ -60,21 +60,6 @@ class NodeRelationship(models.Model):
     def __str__(self):
         return f"{self.source_node.user_id} -> {self.target_node.user_id}"
 
-
-class SIoTNode(models.Model):
-    """Represents a Device/User entity in the SIoT network."""
-    node_id = models.IntegerField(primary_key=True)
-    user = models.ForeignKey(UserDimension, on_delete=models.CASCADE)
-    device = models.ForeignKey(DeviceDimension, on_delete=models.CASCADE)
-    service = models.ForeignKey(ServiceDimension, on_delete=models.CASCADE)
-
-    # Security Flag
-    is_malicious = models.BooleanField(default=False, help_text="Flagged by the ML Model")
-    joined_at = models.DateTimeField(default=timezone.now)
-
-    def __str__(self):
-        return f"{self.node_id}"
-
 class InteractionHistory(models.Model):
     """The immutable ledger of all network events used for ML feature extraction."""
     interaction_id = models.AutoField(primary_key=True)
@@ -82,22 +67,11 @@ class InteractionHistory(models.Model):
     provider = models.ForeignKey(UserDimension, related_name='services_provided', on_delete=models.CASCADE)
     quality_of_service_provided=models.FloatField(default=0.5)
     rating_received=models.FloatField(default=0.5)
+    total_trust_for_interaction=models.FloatField(default=0.5)
     timestamp = models.DateTimeField(default=timezone.now)
 
     class Meta:
-        # Indexing speeds up the complex groupby queries our ML model will run later
+        # Indexing speeds up the complex groupby queries our DL model will run later
         indexes = [
             models.Index(fields=['provider', 'requester']), 
         ]
-
-class TrustScore(models.Model):
-    """The final calculated multi-dimensional trust output."""
-    node = models.OneToOneField(SIoTNode, on_delete=models.CASCADE, related_name='trust_score')
-    t_user = models.FloatField(default=0.5, help_text="User Intention Score")
-    t_device = models.FloatField(default=0.5, help_text="Device Hardware Score")
-    t_service = models.FloatField(default=0.5, help_text="Service Quality Score")
-    t_final = models.FloatField(default=0.5, help_text="Aggregated Multidimensional Score")
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"Trust Profile: {self.node.node_id} | Final: {self.t_final}"

@@ -1,19 +1,8 @@
 # models.py
-from sqlalchemy import Column, String, Float, Boolean, Integer, DateTime, ForeignKey, Table, UniqueConstraint, Index
+from sqlalchemy import Column, Float, Integer, DateTime, ForeignKey, UniqueConstraint, Index
 from database import Base
 import datetime
 
-class SIoTNode(Base):
-    # Django created this table as "appname_modelname"
-    __tablename__ = "network_state_siotnode"
-
-    node_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("network_state_userdimension.user_id"))
-    device_id = Column(Integer, ForeignKey("network_state_devicedimension.device_id"))
-    service_id = Column(Integer, ForeignKey("network_state_servicedimension.service_id"))
-    is_malicious = Column(Boolean, default=False)
-    joined_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    
 class InteractionHistory(Base):
     __tablename__ = "network_state_interactionhistory"
 
@@ -22,6 +11,7 @@ class InteractionHistory(Base):
     provider_id = Column(Integer, ForeignKey("network_state_userdimension.user_id"))
     quality_of_service_provided=Column(Float, default=0.5)
     rating_received=Column(Float, default=0.5)
+    total_trust_for_interaction=Column(Float, default=0.5)
     timestamp = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
 
 class UserDimension(Base):
